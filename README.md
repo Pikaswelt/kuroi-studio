@@ -1,6 +1,6 @@
 # Kuroi Studio
 
-**AI Anime Video Studio für Windows.** Kuroi Studio ist eine Desktop-App für Anime-Edits, AMVs und Kurzvideos.
+**AI Anime Video Studio für Windows und Linux.** Kuroi Studio ist eine Desktop-App für Anime-Edits, AMVs und Kurzvideos.
 Herzstück ist **Kuroi Cut**, ein Schnitt-Editor im Stil von CapCut, in dem KI-Agents (z. B. Claude Code) live mitschneiden
 können, während du zuschaust und selbst weiterarbeitest.
 
@@ -11,26 +11,36 @@ können, während du zuschaust und selbst weiterarbeitest.
 - **Beat-Erkennung und Beat-Cuts**, Texte, Effekte, Übergänge, Keyframes, Untertitel
 - **Export als MP4** über FFmpeg, mit Fortschritt im Rendering-Tab
 - **Dashboard:** laufende Jobs, Live-Protokoll, fertige Videos und Systemauslastung
+- **Automatische Einrichtung:** Node.js, FFmpeg, yt-dlp und Python werden beim ersten Start installiert, der KI-Agent wird automatisch verbunden
 
 ## Download
-Den Installer (`Kuroi Studio_x.y.z_x64-setup.exe`) gibt es unter **[Releases](../../releases)**.
+Unter **[Releases](../../releases)**:
+- **Windows:** `Kuroi Studio_x.y.z_x64-setup.exe`
+- **Linux:** `Kuroi Studio_x.y.z_amd64.deb` (Ubuntu, Debian, Mint …) oder `Kuroi Studio_x.y.z_amd64.AppImage` (alle Distributionen)
 
 ## Voraussetzungen
-- Windows 10 oder 11 (64 Bit)
-- [Node.js](https://nodejs.org) 20 oder neuer
-- [FFmpeg](https://ffmpeg.org) im `PATH` (`ffmpeg` und `ffprobe`)
-- Optional: [yt-dlp](https://github.com/yt-dlp/yt-dlp) für Downloads, [Claude Code](https://claude.com/claude-code) für den KI-Agent
+- Windows 10 oder 11 (64 Bit) mit winget (App-Installer, ist bei aktuellen Versionen dabei)
+- oder Linux x86_64 mit apt, dnf, pacman oder zypper
+- Optional: [Claude Code](https://claude.com/claude-code) oder Claude Desktop für den KI-Agent
+
+Alles andere richtet die App selbst ein.
 
 ## Installation
-1. Installer aus den Releases herunterladen und ausführen
-2. Kuroi Studio starten. Beim ersten Start legt die App den Ordner `%USERPROFILE%\KuroiStudio` an, dort liegen deine Projekte und Exporte.
+**Windows:** Installer herunterladen und ausführen.
 
-### KI-Agent verbinden (optional)
-Damit Claude Code im Editor mitschneiden kann, registrierst du den mitgelieferten MCP-Server einmalig:
-
+**Linux:**
 ```bash
-claude mcp add --scope user kuroi-studio -- node "%USERPROFILE%\KuroiStudio\studio\server.mjs"
+sudo apt install "./Kuroi Studio_1.1.0_amd64.deb"
 ```
+oder das AppImage ausführbar machen (`chmod +x`) und starten.
+
+Beim ersten Start richtet sich Kuroi Studio selbst ein:
+1. Fehlende Tools (Node.js, FFmpeg, yt-dlp, Python) werden installiert. Windows fragt dabei evtl. nach Admin-Rechten, Linux nach deinem Passwort.
+2. Der MCP-Server `kuroi-studio` und der Live-Hook werden bei Claude Code (und Claude Desktop, falls installiert) eingetragen.
+3. Der Editor-Server startet.
+
+Danach Claude einmal neu starten. Projekte und Exporte liegen in `%USERPROFILE%\KuroiStudio` bzw. `~/KuroiStudio`.
+Die Einrichtung lässt sich jederzeit im Dashboard unter *System Status → Fehlendes automatisch einrichten* wiederholen.
 
 ## Lizenz
 Kuroi Studio ist **proprietäre Software**. Der Quellcode ist nicht öffentlich.

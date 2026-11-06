@@ -24,20 +24,54 @@ jobs:
           ACTOR: ${{ github.actor }}
           REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
-          if [ -z "${WEBHOOK:-}" ]; then
-            echo "::error::Secret DISCORD_ISSUE_WEBHOOK fehlt"
-            exit 1
-          fi
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            NUMBER="TEST"
-            TITLE="Testmeldung aus GitHub Actions"
-            URL="https://github.com/$REPO/issues"
-            AUTHOR="$ACTOR"
-            BODY="Wenn du diese Nachricht siehst, kommen neue Bugmeldungen aus Kuroi Studio hier an."
-          fi
-          if [ -z "${BODY:-}" ]; then BODY="(keine Beschreibung)"; fi
-          PAYLOAD=$(jq -n \
-            --arg n "$NUMBER" --arg t "$TITLE" --arg u "$URL" --arg a "$AUTHOR" --arg b "$BODY" \
-            '{username:"Kuroi Bugbot", embeds:[{title:("🐞 Issue #"+$n+": "+$t), url:$u, description:(if ($b|length)>1200 then $b[0:1200]+"…" else $b end), color:15158332, fields:[{name:"Gemeldet von",value:$a,inline:true},{name:"Repository",value:"Kuroi Studio",inline:true}], footer:{text:"Kuroi Studio • CrazyMine.de"}}]}')
-          curl -sS -f -X POST "$WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD" > /dev/null
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          event = os.environ.get("EVENT", "")
+          number = os.environ.get("NUMBER", "")
+          title = os.environ.get("TITLE", "")
+          url = os.environ.get("URL", "")
+          author = os.environ.get("AUTHOR", "")
+          body = os.environ.get("BODY", "")
+          repo = os.environ.get("REPO", "")
+          if event == "workflow_dispatch":
+              number = "TEST"
+              title = "Testmeldung aus GitHub Actions"
+              url = f"https://github.com/{repo}/issues"
+              author = os.environ.get("ACTOR", "")
+              body = "Wenn du diese Nachricht siehst, kommen neue Bugmeldungen aus Kuroi Studio hier an."
+          if not body:
+              body = "(keine Beschreibung)"
+          if len(body) > 1200:
+              body = body[:1200] + "…"
+          hook = os.environ.get("WEBHOOK", "")
+          if not hook:
+              raise SystemExit("Secret DISCORD_ISSUE_WEBHOOK fehlt")
+          payload = {
+              "username": "Kuroi Bugbot",
+              "embeds": [{
+                  "title": f"🐞 Issue #{number}: {title}",
+                  "url": url,
+                  "description": body,
+                  "color": 15158332,
+                  "fields": [
+                      {"name": "Gemeldet von", "value": author or "unbekannt", "inline": True},
+                      {"name": "Repository", "value": "Kuroi Studio", "inline": True},
+                  ],
+                  "footer": {"text": "Kuroi Studio • CrazyMine.de"},
+              }],
+          }
+          data = json.dumps(payload).encode("utf-8")
+          print("payload bytes:", len(data))
+          req = urllib.request.Request(
+              hook + "?wait=true",
+              data=data,
+              headers={"Content-Type": "application/json", "User-Agent": "Kuroi-Notify/1.0"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req) as r:
+                  print("Discord:", r.status)
+          except urllib.error.HTTPError as e:
+              print(e.read().decode("utf-8", "replace"))
+              raise
+          PY

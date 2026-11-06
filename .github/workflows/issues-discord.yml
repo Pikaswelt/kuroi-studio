@@ -1,0 +1,43 @@
+name: Issue nach Discord
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord benachrichtigen
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_ISSUE_WEBHOOK }}
+          EVENT: ${{ github.event_name }}
+          NUMBER: ${{ github.event.issue.number }}
+          TITLE: ${{ github.event.issue.title }}
+          URL: ${{ github.event.issue.html_url }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          BODY: ${{ github.event.issue.body }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then
+            echo "::error::Secret DISCORD_ISSUE_WEBHOOK fehlt"
+            exit 1
+          fi
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            NUMBER="TEST"
+            TITLE="Testmeldung aus GitHub Actions"
+            URL="https://github.com/$REPO/issues"
+            AUTHOR="$ACTOR"
+            BODY="Wenn du diese Nachricht siehst, kommen neue Bugmeldungen aus Kuroi Studio hier an."
+          fi
+          if [ -z "${BODY:-}" ]; then BODY="(keine Beschreibung)"; fi
+          PAYLOAD=$(jq -n \
+            --arg n "$NUMBER" --arg t "$TITLE" --arg u "$URL" --arg a "$AUTHOR" --arg b "$BODY" \
+            '{username:"Kuroi Bugbot", embeds:[{title:("🐞 Issue #"+$n+": "+$t), url:$u, description:(if ($b|length)>1200 then $b[0:1200]+"…" else $b end), color:15158332, fields:[{name:"Gemeldet von",value:$a,inline:true},{name:"Repository",value:"Kuroi Studio",inline:true}], footer:{text:"Kuroi Studio • CrazyMine.de"}}]}')
+          curl -sS -f -X POST "$WEBHOOK?wait=true" -H "Content-Type: application/json" -d "$PAYLOAD" > /dev/null

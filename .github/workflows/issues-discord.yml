@@ -14,7 +14,8 @@ jobs:
     steps:
       - name: Discord benachrichtigen
         env:
-          WEBHOOK: ${{ secrets.DISCORD_ISSUE_WEBHOOK }}
+          BOT_TOKEN: ${{ secrets.DISCORD_AGENT_BOT_TOKEN }}
+          CHANNEL: ${{ secrets.DISCORD_AGENT_CHANNEL_ID }}
           EVENT: ${{ github.event_name }}
           NUMBER: ${{ github.event.issue.number }}
           TITLE: ${{ github.event.issue.title }}
@@ -34,21 +35,31 @@ jobs:
           body = os.environ.get("BODY", "")
           repo = os.environ.get("REPO", "")
           if event == "workflow_dispatch":
-              content = "✅ **Testmeldung:** Neue Kuroi-Bugmeldungen kommen ab jetzt in diesem Kanal an."
-          else:
-              if not body:
-                  body = "(keine Beschreibung)"
-              content = f"🐞 **Neues Issue #{number}:** {title}\n<{url}>\n**Gemeldet von:** {author}\n\n{body}"
-          if len(content) > 1900:
-              content = content[:1897] + "…"
-          hook = os.environ.get("WEBHOOK", "")
-          if not hook:
-              raise SystemExit("Secret DISCORD_ISSUE_WEBHOOK fehlt")
-          payload = {"content": content, "allowed_mentions": {"parse": []}}
+              number = "TEST"
+              title = "Testmeldung aus GitHub Actions"
+              url = f"https://github.com/{repo}/issues"
+              author = os.environ.get("ACTOR", "")
+              body = "Wenn du diese Nachricht siehst, kommen neue Bugmeldungen aus Kuroi Studio hier an."
+          if not body:
+              body = "(keine Beschreibung)"
+          if len(body) > 3500:
+              body = body[:3500] + "…"
+          embed = {
+              "title": ("🐞 Issue #" + number + ": " + title)[:256],
+              "url": url or f"https://github.com/{repo}/issues",
+              "description": ("**Gemeldet von:** " + (author or "unbekannt") + "\n\n" + body)[:4000],
+              "color": 15158332,
+              "footer": {"text": "Kuroi Studio • CrazyMine.de"},
+          }
+          token = os.environ.get("BOT_TOKEN", "")
+          channel = os.environ.get("CHANNEL", "")
+          if not token or not channel:
+              raise SystemExit("Secrets DISCORD_AGENT_BOT_TOKEN / DISCORD_AGENT_CHANNEL_ID fehlen")
+          payload = {"allowed_mentions": {"parse": []}, "embeds": [embed]}
           req = urllib.request.Request(
-              hook + "?wait=true",
+              f"https://discord.com/api/v10/channels/{channel}/messages",
               data=json.dumps(payload).encode("utf-8"),
-              headers={"Content-Type": "application/json", "User-Agent": "Kuroi-Notify/1.0"},
+              headers={"Content-Type": "application/json", "User-Agent": "Kuroi-Notify/1.0", "Authorization": "Bot " + token},
               method="POST",
           )
           try:

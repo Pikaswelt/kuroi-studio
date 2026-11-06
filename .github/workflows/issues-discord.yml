@@ -34,37 +34,20 @@ jobs:
           body = os.environ.get("BODY", "")
           repo = os.environ.get("REPO", "")
           if event == "workflow_dispatch":
-              number = "TEST"
-              title = "Testmeldung aus GitHub Actions"
-              url = f"https://github.com/{repo}/issues"
-              author = os.environ.get("ACTOR", "")
-              body = "Wenn du diese Nachricht siehst, kommen neue Bugmeldungen aus Kuroi Studio hier an."
-          if not body:
-              body = "(keine Beschreibung)"
-          if len(body) > 1200:
-              body = body[:1200] + "…"
+              content = "✅ **Testmeldung:** Neue Kuroi-Bugmeldungen kommen ab jetzt in diesem Kanal an."
+          else:
+              if not body:
+                  body = "(keine Beschreibung)"
+              content = f"🐞 **Neues Issue #{number}:** {title}\n<{url}>\n**Gemeldet von:** {author}\n\n{body}"
+          if len(content) > 1900:
+              content = content[:1897] + "…"
           hook = os.environ.get("WEBHOOK", "")
           if not hook:
               raise SystemExit("Secret DISCORD_ISSUE_WEBHOOK fehlt")
-          payload = {
-              "username": "Kuroi Bugbot",
-              "embeds": [{
-                  "title": f"🐞 Issue #{number}: {title}",
-                  "url": url,
-                  "description": body,
-                  "color": 15158332,
-                  "fields": [
-                      {"name": "Gemeldet von", "value": author or "unbekannt", "inline": True},
-                      {"name": "Repository", "value": "Kuroi Studio", "inline": True},
-                  ],
-                  "footer": {"text": "Kuroi Studio • CrazyMine.de"},
-              }],
-          }
-          data = json.dumps(payload).encode("utf-8")
-          print("payload bytes:", len(data))
+          payload = {"content": content, "allowed_mentions": {"parse": []}}
           req = urllib.request.Request(
               hook + "?wait=true",
-              data=data,
+              data=json.dumps(payload).encode("utf-8"),
               headers={"Content-Type": "application/json", "User-Agent": "Kuroi-Notify/1.0"},
               method="POST",
           )
